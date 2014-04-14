@@ -1,11 +1,12 @@
+from __future__ import print_function
 import uuid
 
 from django import forms
 from django.db.models import Field, SubfieldBase
 try:
-    from django.utils.encoding import smart_unicode
+    from django.utils.encoding import smart_text, python_2_unicode_compatible
 except ImportError:
-    from django.utils.encoding import smart_text as smart_unicode
+    from django.utils.encoding import smart_unicode as smart_text
 
 try:
     # psycopg2 needs us to register the uuid type
@@ -15,6 +16,7 @@ except (ImportError, AttributeError):
     pass
 
 
+@python_2_unicode_compatible
 class StringUUID(uuid.UUID):
     def __init__(self, *args, **kwargs):
         # get around UUID's immutable setter
@@ -22,17 +24,15 @@ class StringUUID(uuid.UUID):
 
         super(StringUUID, self).__init__(*args, **kwargs)
 
-    def __unicode__(self):
-        return unicode(str(self))
-
     def __str__(self):
+        print(self.hyphenate)
         if self.hyphenate:
             return super(StringUUID, self).__str__()
 
         return self.hex
 
     def __len__(self):
-        return len(self.__unicode__())
+        return len(self.__str__())
 
 
 class UUIDField(Field):
@@ -118,7 +118,7 @@ class UUIDField(Field):
         if val is None:
             data = ''
         else:
-            data = unicode(val)
+            data = smart_text(val)
         return data
 
     def to_python(self, value):
@@ -132,7 +132,7 @@ class UUIDField(Field):
             return None
         # attempt to parse a UUID including cases in which value is a UUID
         # instance already to be able to get our StringUUID in.
-        return StringUUID(smart_unicode(value), hyphenate=self.hyphenate)
+        return StringUUID(smart_text(value), hyphenate=self.hyphenate)
 
     def formfield(self, **kwargs):
         defaults = {
