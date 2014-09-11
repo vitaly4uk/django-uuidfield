@@ -1,12 +1,11 @@
 from __future__ import print_function
 import uuid
 
+from django.utils import six
 from django import forms
 from django.db.models import Field, SubfieldBase
-try:
-    from django.utils.encoding import smart_text, python_2_unicode_compatible
-except ImportError:
-    from django.utils.encoding import smart_unicode as smart_text
+from django.utils.encoding import python_2_unicode_compatible
+
 
 try:
     # psycopg2 needs us to register the uuid type
@@ -25,7 +24,6 @@ class StringUUID(uuid.UUID):
         super(StringUUID, self).__init__(*args, **kwargs)
 
     def __str__(self):
-        print(self.hyphenate)
         if self.hyphenate:
             return super(StringUUID, self).__str__()
 
@@ -35,7 +33,8 @@ class StringUUID(uuid.UUID):
         return len(self.__str__())
 
 
-class UUIDField(Field):
+@python_2_unicode_compatible
+class UUIDField(six.with_metaclass(SubfieldBase, Field)):
     """
     A field which stores a UUID value in hex format. This may also have
     the Boolean attribute 'auto' which will set the value on initial save to a
@@ -43,7 +42,6 @@ class UUIDField(Field):
     UUIDs are expected to be unique we enforce this with a DB constraint.
     """
     # TODO: support binary storage types
-    __metaclass__ = SubfieldBase
 
     def __init__(self, version=4, node=None, clock_seq=None,
             namespace=None, name=None, auto=False, hyphenate=False, *args, **kwargs):
@@ -111,7 +109,7 @@ class UUIDField(Field):
         """
         if isinstance(value, uuid.UUID):
             value = str(value)
-        if isinstance(value, str):
+        if isinstance(value, six.string_types):
             if '-' in value:
                 return value.replace('-', '')
         return value
@@ -121,7 +119,7 @@ class UUIDField(Field):
         if val is None:
             data = ''
         else:
-            data = smart_text(val)
+            data = str(val)
         return data
 
     def to_python(self, value):
@@ -135,7 +133,7 @@ class UUIDField(Field):
             return None
         # attempt to parse a UUID including cases in which value is a UUID
         # instance already to be able to get our StringUUID in.
-        return StringUUID(smart_text(value), hyphenate=self.hyphenate)
+        return StringUUID(str(value), hyphenate=self.hyphenate)
 
     def formfield(self, **kwargs):
         defaults = {
