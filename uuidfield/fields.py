@@ -33,7 +33,6 @@ class StringUUID(uuid.UUID):
         return len(self.__str__())
 
 
-@python_2_unicode_compatible
 class UUIDField(six.with_metaclass(SubfieldBase, Field)):
     """
     A field which stores a UUID value in hex format. This may also have
